@@ -52,6 +52,27 @@ app.use('/api/', apiLimiter);
 
 
 
+// Helper to recursively find chrome executable in cache
+function findChromeExecutable(dir) {
+    if (!fs.existsSync(dir)) return null;
+    try {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+                const found = findChromeExecutable(fullPath);
+                if (found) return found;
+            } else if (file === 'chrome' || file === 'chrome.exe') {
+                return fullPath;
+            }
+        }
+    } catch (e) {
+        console.error('[SCRAPER] Error searching cache directory:', e.message);
+    }
+    return null;
+}
+
 // ============================================================================
 // CORE GOOGLE MAPS SCRAPER
 // ============================================================================
@@ -64,16 +85,6 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
        
         console.log(`[SCRAPER] Starting scrape for "${searchQuery}"`);
 
-        const possiblePath = path.join(
-            __dirname,
-            '.cache',
-            'puppeteer',
-            'chrome',
-            'win64-148.0.7778.167',
-            'chrome-win64',
-            'chrome.exe'
-        );
-
         const launchOptions = {
             headless: 'new',
             args: [
@@ -84,12 +95,15 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
             ]
         };
 
+        const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
+        const localChromePath = findChromeExecutable(cacheDir);
+
         if (process.env.PUPPETEER_EXECUTABLE_PATH) {
             launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
             console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
-        } else if (fs.existsSync(possiblePath)) {
-            launchOptions.executablePath = possiblePath;
-            console.log('[SCRAPER] Using local Chrome binary');
+        } else if (localChromePath) {
+            launchOptions.executablePath = localChromePath;
+            console.log(`[SCRAPER] Found and using local Chrome binary: ${localChromePath}`);
         }
 
         browser = await puppeteer.launch(launchOptions);
