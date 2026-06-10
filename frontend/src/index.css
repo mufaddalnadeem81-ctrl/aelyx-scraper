@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #030406;
+  --color-surface: rgba(255, 255, 255, 0.02);
+  --color-surface-hover: rgba(255, 255, 255, 0.05);
+  --color-border: rgba(255, 255, 255, 0.08);
+  
+  /* Premium Fade Colors - more pastel and vibrant */
+  --color-fade-blue: #7dd3fc;
+  --color-fade-purple: #c084fc;
+  --color-fade-cyan: #22d3ee;
+  --color-fade-emerald: #34d399;
+  --color-fade-rose: #fb7185;
+  
+  --color-primary: var(--color-fade-blue);
+  --color-secondary: var(--color-fade-purple);
+  --color-accent: var(--color-fade-emerald);
+  
+  --font-sans: "Inter", "Hanken Grotesk", ui-sans-serif, system-ui;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-white antialiased overflow-y-auto scroll-smooth;
+    font-family: var(--font-sans);
+    margin: 0;
+    min-height: 100vh;
+    background-attachment: fixed;
+    background-image: 
+      radial-gradient(circle at 0% 0%, rgba(125, 211, 252, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(192, 132, 252, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.02) 0%, transparent 100%);
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/[0.01] backdrop-blur-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)];
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+  }
+  
+  .glass-hover {
+    @apply hover:bg-white/[0.05] transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)];
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.02);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 15px currentColor;
+  }
+
+  .fade-gradient-primary {
+    background: linear-gradient(135deg, var(--color-fade-blue) 0%, var(--color-fade-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .fade-gradient-secondary {
+    background: linear-gradient(135deg, var(--color-fade-purple) 0%, var(--color-fade-rose) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Animations */
+  .animate-float {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(1deg); }
+  }
+
+  .animate-reveal {
+    animation: reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(30px); filter: blur(20px); }
+    to { opacity: 1; transform: translateY(0px); filter: blur(0px); }
+  }
+
+  .fill-forwards {
+    animation-fill-mode: forwards;
+  }
+
+  .animate-scan {
+    animation: scan 4s linear infinite;
+  }
+
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    50% { transform: translateY(380px); }
+    100% { transform: translateY(-100%); }
+  }
+
+  .animate-blob {
+    animation: blob 20s infinite alternate;
+  }
+
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  /* Global Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, var(--color-fade-blue), var(--color-fade-purple));
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, var(--color-fade-cyan), var(--color-fade-emerald));
+  }
+}
