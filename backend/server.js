@@ -15,6 +15,7 @@ const supabase = require('./supabase');
 puppeteer.use(StealthPlugin());
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ============================================================================
 // SECURITY LAYER
@@ -83,7 +84,10 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
             ]
         };
 
-        if (fs.existsSync(possiblePath)) {
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+            console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+        } else if (fs.existsSync(possiblePath)) {
             launchOptions.executablePath = possiblePath;
             console.log('[SCRAPER] Using local Chrome binary');
         }
