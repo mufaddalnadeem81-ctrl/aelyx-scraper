@@ -23,7 +23,7 @@ app.set('trust proxy', 1);
 app.use(helmet());
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, '')) 
     : '*';
 
 app.use(cors({
