@@ -134,7 +134,7 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
         if (process.env.BROWSERLESS_API_KEY) {
             console.log('[SCRAPER] Connecting to Browserless.io cloud browser...');
             browser = await puppeteer.connect({
-                browserWSEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`
+                browserWSEndpoint: `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}&timeout=600000`
             });
         } else {
             browser = await puppeteer.launch(launchOptions);
