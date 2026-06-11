@@ -510,7 +510,7 @@ app.post('/api/scrape', verifyApiKey, async (req, res) => {
 
         const safeLimit = Math.min(
             Number(limit) || 20,
-            50
+            20
         );
 
         const results = await scrapeGoogleMaps(
