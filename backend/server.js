@@ -331,16 +331,26 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
                             categoryName = categoryBtn.textContent.trim();
                             categories.push(categoryName);
                         } else {
-                            const w4efsdElements = Array.from(document.querySelectorAll('.W4Efsd'));
-                            for (const el of w4efsdElements) {
+                            // Find .fontBodyMedium that contains · and a category
+                            const bodyMediums = Array.from(document.querySelectorAll('.fontBodyMedium'));
+                            for (const el of bodyMediums) {
                                 const text = el.textContent.trim();
-                                if (text.includes('·') && !text.includes('Open')) {
+                                if (text.includes('·') && !text.includes('Open') && !text.includes('Closes') && !text.includes('Opens')) {
                                     const parts = text.split('·').map(p => p.trim());
-                                    if (parts.length > 0 && !parts[0].match(/\d/) && parts[0].length > 3) {
+                                    if (parts[0] && !/\d/.test(parts[0]) && parts[0].length > 3 && parts[0].length < 40) {
                                         categoryName = parts[0];
                                         categories.push(categoryName);
                                         break;
                                     }
+                                }
+                            }
+                            
+                            // Fallback
+                            if (categoryName === 'N/A') {
+                                const buttons = Array.from(document.querySelectorAll('button[class*="DkEaL"]'));
+                                if (buttons.length > 0) {
+                                    categoryName = buttons[0].textContent.trim();
+                                    categories.push(categoryName);
                                 }
                             }
                         }
