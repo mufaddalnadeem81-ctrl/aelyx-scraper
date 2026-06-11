@@ -84,16 +84,39 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
 
         let launchOptions;
 
+        const extremeMemoryArgs = [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process',
+            '--disable-extensions',
+            '--no-first-run',
+            '--disable-background-networking',
+            '--disable-background-timer-throttling',
+            '--disable-client-side-phishing-detection',
+            '--disable-default-apps',
+            '--disable-hang-monitor',
+            '--disable-popup-blocking',
+            '--disable-prompt-on-repost',
+            '--disable-sync',
+            '--disable-translate',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--safebrowsing-disable-auto-update',
+            '--ignore-certificate-errors',
+            '--ignore-ssl-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-features=site-per-process,TranslateUI',
+            '--js-flags="--max-old-space-size=256"'
+        ];
+
         if (process.env.RENDER) {
             launchOptions = {
                 args: [
                     ...chromium.args, 
-                    '--no-sandbox', 
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-zygote',
-                    '--single-process'
+                    ...extremeMemoryArgs
                 ],
                 defaultViewport: chromium.defaultViewport,
                 executablePath: await chromium.executablePath(),
@@ -103,12 +126,7 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
         } else {
             launchOptions = {
                 headless: 'new',
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-blink-features=AutomationControlled'
-                ]
+                args: extremeMemoryArgs
             };
 
             const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
@@ -129,7 +147,8 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
 
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-            if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+            const allowed = ['document', 'script', 'xhr', 'fetch'];
+            if (!allowed.includes(req.resourceType())) {
                 req.abort();
             } else {
                 req.continue();
@@ -225,7 +244,7 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
         console.log(`[SCRAPER] Found ${businesses.length} URLs. Starting deep extraction...`);
 
         const data = [];
-        const BATCH_SIZE = 2; // Reduced to 2 to run safely under 512MB RAM
+        const BATCH_SIZE = 1; // ABSOLUTE MINIMUM for memory constraints
         
         for (let i = 0; i < businesses.length; i += BATCH_SIZE) {
             const batch = businesses.slice(i, i + BATCH_SIZE);
@@ -236,7 +255,8 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
                 try {
                     await detailPage.setRequestInterception(true);
                     detailPage.on('request', (req) => {
-                        if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+                        const allowed = ['document', 'script', 'xhr', 'fetch'];
+                        if (!allowed.includes(req.resourceType())) {
                             req.abort();
                         } else {
                             req.continue();
@@ -316,7 +336,10 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
                         url: b.url
                     };
                 } finally {
-                    await detailPage.close().catch(() => {});
+                    try {
+                        await detailPage.goto('about:blank'); // Free memory
+                        await detailPage.close();
+                    } catch (e) {}
                 }
             });
             
