@@ -269,18 +269,31 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
                     await new Promise(resolve => setTimeout(resolve, 200)); // Drastically reduced delay
 
                     const details = await detailPage.evaluate(() => {
-                        let rating = 'N/A';
+                        let totalScore = 'N/A';
+                        let reviewsCount = 'N/A';
                         let phone = 'No Contact';
                         let address = 'N/A';
+                        let street = 'N/A';
+                        let city = 'N/A';
+                        let state = 'N/A';
+                        let countryCode = 'N/A';
                         let website = 'Not Available';
+                        let categories = [];
+                        let categoryName = 'N/A';
 
-                        // Rating
-                        const ratingMatch = document.body.textContent.match(/(\d\.\d)\s*stars?/);
-                        if (ratingMatch) {
-                            rating = `⭐ ${ratingMatch[1]}`;
+                        // Rating and Reviews
+                        const rEl = document.querySelector('div.fontDisplayLarge');
+                        if (rEl) {
+                            totalScore = rEl.textContent.trim();
                         } else {
-                            const rEl = document.querySelector('div.fontDisplayLarge');
-                            if (rEl) rating = `⭐ ${rEl.textContent.trim()}`;
+                            const ratingMatch = document.body.textContent.match(/(\d\.\d)\s*stars?/);
+                            if (ratingMatch) totalScore = ratingMatch[1];
+                        }
+
+                        const reviewsEl = document.querySelector('button[aria-label*="reviews"], span[aria-label*="reviews"]');
+                        if (reviewsEl) {
+                            const match = reviewsEl.textContent.match(/\(([\d,]+)\)/) || (reviewsEl.getAttribute('aria-label') || '').match(/([\d,]+)\s*reviews/i);
+                            if (match) reviewsCount = match[1].replace(/,/g, '');
                         }
 
                         // Website
@@ -312,26 +325,80 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
                             }
                         }
 
-                        return { rating, phone, address, website };
+                        // Category
+                        const categoryBtn = document.querySelector('button[jsaction="pane.rating.category"]');
+                        if (categoryBtn) {
+                            categoryName = categoryBtn.textContent.trim();
+                            categories.push(categoryName);
+                        } else {
+                            const w4efsdElements = Array.from(document.querySelectorAll('.W4Efsd'));
+                            for (const el of w4efsdElements) {
+                                const text = el.textContent.trim();
+                                if (text.includes('·') && !text.includes('Open')) {
+                                    const parts = text.split('·').map(p => p.trim());
+                                    if (parts.length > 0 && !parts[0].match(/\d/) && parts[0].length > 3) {
+                                        categoryName = parts[0];
+                                        categories.push(categoryName);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Address Parsing
+                        if (address !== 'N/A') {
+                            const parts = address.split(',').map(p => p.trim());
+                            const len = parts.length;
+                            if (len === 1) {
+                                street = parts[0];
+                            } else if (len === 2) {
+                                street = parts[0];
+                                city = parts[1];
+                            } else if (len >= 3) {
+                                countryCode = parts[len - 1];
+                                const stateZip = parts[len - 2].split(' ');
+                                if (stateZip.length > 1 && /\d/.test(stateZip[stateZip.length - 1])) {
+                                    state = stateZip.slice(0, -1).join(' ');
+                                } else {
+                                    state = parts[len - 2];
+                                }
+                                city = parts[len - 3];
+                                street = parts.slice(0, len - 3).join(', ');
+                            }
+                        }
+
+                        return { totalScore, reviewsCount, phone, address, street, city, state, countryCode, website, categories, categoryName };
                     });
 
                     return {
-                        name: b.name,
-                        rating: details.rating,
-                        phone: details.phone,
-                        address: details.address !== 'N/A' && details.address !== '' ? details.address : 'N/A',
+                        title: b.name,
+                        totalScore: details.totalScore,
+                        reviewsCount: details.reviewsCount,
+                        street: details.street,
+                        city: details.city,
+                        state: details.state,
+                        countryCode: details.countryCode,
                         website: details.website !== 'Not Available' && details.website !== '' ? details.website : 'Not Available',
-                        url: b.url
+                        phone: details.phone,
+                        categories: details.categories,
+                        url: b.url,
+                        categoryName: details.categoryName
                     };
                 } catch (err) {
                     console.error(`[SCRAPER] Error extracting details for ${b.name}: ${err.message}`);
                     return {
-                        name: b.name,
-                        rating: 'N/A',
-                        phone: 'No Contact',
-                        address: 'N/A',
+                        title: b.name,
+                        totalScore: 'N/A',
+                        reviewsCount: 'N/A',
+                        street: 'N/A',
+                        city: 'N/A',
+                        state: 'N/A',
+                        countryCode: 'N/A',
                         website: 'Not Available',
-                        url: b.url
+                        phone: 'No Contact',
+                        categories: [],
+                        url: b.url,
+                        categoryName: 'N/A'
                     };
                 } finally {
                     try {

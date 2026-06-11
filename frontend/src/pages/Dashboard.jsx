@@ -380,89 +380,148 @@ export default function Dashboard() {
                   <p className="text-sm text-white/40">Real-time data stream</p>
                 </div>
                 {results.length > 0 && (
-                  <span className="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full font-mono font-bold border border-indigo-500/10 animate-pulse-soft">
-                    {results.length} Nodes Found
-                  </span>
+                  <div className="flex gap-3 items-center">
+                    <span className="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full font-mono font-bold border border-indigo-500/10 animate-pulse-soft">
+                      {results.length} Nodes Found
+                    </span>
+                    <button
+                      onClick={() => {
+                        const headers = ["Place name", "Total Score", "Reviews Count", "Street", "City", "State", "Country Code", "Website", "Phone", "Categories", "URL", "Category Name"];
+                        const csvContent = [
+                          headers.join(','),
+                          ...results.map(r => [
+                            `"${(r.title || '').replace(/"/g, '""')}"`,
+                            `"${(r.totalScore || '').replace(/"/g, '""')}"`,
+                            `"${(r.reviewsCount || '').replace(/"/g, '""')}"`,
+                            `"${(r.street || '').replace(/"/g, '""')}"`,
+                            `"${(r.city || '').replace(/"/g, '""')}"`,
+                            `"${(r.state || '').replace(/"/g, '""')}"`,
+                            `"${(r.countryCode || '').replace(/"/g, '""')}"`,
+                            `"${(r.website || '').replace(/"/g, '""')}"`,
+                            `"${(r.phone || '').replace(/"/g, '""')}"`,
+                            `"${(r.categories ? r.categories.join('; ') : '').replace(/"/g, '""')}"`,
+                            `"${(r.url || '').replace(/"/g, '""')}"`,
+                            `"${(r.categoryName || '').replace(/"/g, '""')}"`
+                          ].join(','))
+                        ].join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement("a");
+                        const url = URL.createObjectURL(blob);
+                        link.setAttribute("href", url);
+                        link.setAttribute("download", `aelyx-export-${new Date().toISOString().split('T')[0]}.csv`);
+                        link.style.visibility = 'hidden';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1 rounded-full font-mono font-bold border border-emerald-500/10 transition-colors"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="flex-1 overflow-auto custom-scrollbar pr-2 z-10">
+              <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar pr-2 z-10">
                 {results.length === 0 ? (
                   loading ? (
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full min-w-[1200px] text-left border-collapse">
                       <thead>
                         <tr className="border-b border-white/5 text-[10px] uppercase tracking-widest text-white/40">
-                          <th className="pb-3 font-semibold">Name</th>
-                          <th className="pb-3 font-semibold">Rating</th>
-                          <th className="pb-3 font-semibold">Phone</th>
+                          <th className="pb-3 font-semibold">Place name</th>
+                          <th className="pb-3 font-semibold">Total Score</th>
+                          <th className="pb-3 font-semibold">Reviews Count</th>
+                          <th className="pb-3 font-semibold">Street</th>
+                          <th className="pb-3 font-semibold">City</th>
+                          <th className="pb-3 font-semibold">State</th>
+                          <th className="pb-3 font-semibold">Country Code</th>
                           <th className="pb-3 font-semibold">Website</th>
-                          <th className="pb-3 font-semibold">Address</th>
-                          <th className="pb-3 font-semibold text-right">Actions</th>
+                          <th className="pb-3 font-semibold">Phone</th>
+                          <th className="pb-3 font-semibold">Categories</th>
+                          <th className="pb-3 font-semibold text-center">URL</th>
                         </tr>
                       </thead>
                       <tbody>
                         {Array.from({ length: 4 }).map((_, idx) => (
                           <tr key={idx} className="border-b border-white/5 opacity-60">
-                            <td className="py-4 pr-4">
-                              <div className="h-3.5 bg-white/5 rounded-full w-4/5 animate-shimmer relative overflow-hidden"></div>
-                            </td>
-                            <td className="py-4">
-                              <div className="h-6 bg-white/5 rounded-lg w-12 animate-pulse-soft"></div>
-                            </td>
-                            <td className="py-4">
-                              <div className="h-6 bg-white/5 rounded-lg w-24 animate-pulse-soft"></div>
-                            </td>
-                            <td className="py-4">
-                              <div className="h-4 bg-white/5 rounded-full w-20 animate-pulse-soft"></div>
-                            </td>
-                            <td className="py-4 pr-4">
-                              <div className="h-3.5 bg-white/5 rounded-full w-11/12 animate-shimmer relative overflow-hidden"></div>
-                            </td>
-                            <td className="py-4 text-right">
-                              <div className="h-8 bg-white/5 rounded-lg w-8 inline-block animate-pulse-soft"></div>
-                            </td>
+                            {Array.from({ length: 11 }).map((_, i) => (
+                              <td key={i} className="py-4 pr-4">
+                                <div className="h-3.5 bg-white/5 rounded-full w-4/5 animate-shimmer relative overflow-hidden"></div>
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-30">
+                    <div className="h-full flex flex-col items-center justify-center opacity-30 min-w-full">
                       <Database size={40} className="mb-4 animate-pulse-soft" />
                       <p className="text-sm font-medium">Awaiting Signal</p>
                     </div>
                   )
                 ) : (
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full min-w-[1400px] text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/5 text-[10px] uppercase tracking-widest text-white/40">
-                        <th className="pb-3 font-semibold">Name</th>
-                        <th className="pb-3 font-semibold">Rating</th>
-                        <th className="pb-3 font-semibold">Phone</th>
-                        <th className="pb-3 font-semibold">Website</th>
-                        <th className="pb-3 font-semibold">Address</th>
-                        <th className="pb-3 font-semibold text-right">Actions</th>
+                        <th className="pb-3 font-semibold min-w-[150px]">Place name</th>
+                        <th className="pb-3 font-semibold">Total Score</th>
+                        <th className="pb-3 font-semibold">Reviews Count</th>
+                        <th className="pb-3 font-semibold min-w-[150px]">Street</th>
+                        <th className="pb-3 font-semibold">City</th>
+                        <th className="pb-3 font-semibold">State</th>
+                        <th className="pb-3 font-semibold">Country Code</th>
+                        <th className="pb-3 font-semibold min-w-[120px]">Website</th>
+                        <th className="pb-3 font-semibold min-w-[120px]">Phone</th>
+                        <th className="pb-3 font-semibold min-w-[120px]">Categories</th>
+                        <th className="pb-3 font-semibold text-center">URL</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {results.map((res, i) => {
-                        const cleanRating = res.rating ? res.rating.replace('⭐', '').trim() : 'N/A';
+                        const cleanRating = res.totalScore ? res.totalScore.replace('⭐', '').trim() : 'N/A';
                         return (
                           <tr
                             key={i}
                             className="text-xs hover:bg-white/[0.02] transition-colors opacity-0 animate-reveal fill-forwards group/row"
                             style={{ animationDelay: `${i * 80}ms` }}
                           >
-                            <td className="py-3 font-bold text-white max-w-[150px] truncate group-hover/row:text-indigo-400 transition-colors" title={res.name}>
-                              {res.name}
+                            <td className="py-3 font-bold text-white max-w-[200px] truncate group-hover/row:text-indigo-400 transition-colors" title={res.title}>
+                              {res.title || 'N/A'}
                             </td>
                             <td className="py-3">
-                              {res.rating && res.rating !== 'N/A' ? (
+                              {res.totalScore && res.totalScore !== 'N/A' ? (
                                 <span className="inline-flex items-center gap-1 text-amber-400 font-medium bg-amber-400/10 px-2 py-0.5 rounded-md hover:scale-105 transition-transform duration-200">
                                   <Star size={11} className="fill-amber-400 text-amber-400 animate-pulse-soft" />
                                   <span>{cleanRating}</span>
                                 </span>
                               ) : (
                                 <span className="text-white/30">N/A</span>
+                              )}
+                            </td>
+                            <td className="py-3 text-white/70 font-mono">
+                              {res.reviewsCount || 'N/A'}
+                            </td>
+                            <td className="py-3 text-white/50 group-hover/row:text-white/80 transition-colors" title={res.street}>
+                              <div className="max-w-[200px] truncate text-[11px] pr-2">
+                                {res.street || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="py-3 text-white/70">
+                              {res.city || 'N/A'}
+                            </td>
+                            <td className="py-3 text-white/70">
+                              {res.state || 'N/A'}
+                            </td>
+                            <td className="py-3 text-white/70 font-mono">
+                              {res.countryCode || 'N/A'}
+                            </td>
+                            <td className="py-3 max-w-[150px] truncate">
+                              {res.website && res.website !== 'Not Available' ? (
+                                <a href={res.website} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 hover:underline text-[11px] font-medium" title={res.website}>
+                                  {res.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                                </a>
+                              ) : (
+                                <span className="text-white/30 text-[11px]">Not Available</span>
                               )}
                             </td>
                             <td className="py-3 font-mono text-white/70">
@@ -474,21 +533,10 @@ export default function Dashboard() {
                                 <span className="text-white/30">No Contact</span>
                               )}
                             </td>
-                            <td className="py-3 max-w-[120px]">
-                              {res.website && res.website !== 'Not Available' ? (
-                                <a href={res.website} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 hover:underline text-[11px] font-medium break-all" title={res.website}>
-                                  {res.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-                                </a>
-                              ) : (
-                                <span className="text-white/30 text-[11px]">Not Available</span>
-                              )}
+                            <td className="py-3 text-white/70 max-w-[150px] truncate" title={res.categoryName}>
+                              {res.categoryName || 'N/A'}
                             </td>
-                            <td className="py-3 text-white/50 group-hover/row:text-white/80 transition-colors" title={res.address}>
-                              <div className="max-w-[200px] truncate text-[11px] pr-2">
-                                {res.address}
-                              </div>
-                            </td>
-                            <td className="py-3 text-right">
+                            <td className="py-3 text-center">
                               {res.url && (
                                 <button
                                   onClick={() => window.open(res.url, '_blank')}
