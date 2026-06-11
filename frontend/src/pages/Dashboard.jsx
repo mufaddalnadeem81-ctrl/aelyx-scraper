@@ -332,7 +332,7 @@ export default function Dashboard() {
                   </div>
                   <input
                     type="range"
-                    min="5"
+                    min="1"
                     max="20"
                     value={limit}
                     onChange={(e) => setLimit(e.target.value)}
