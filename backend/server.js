@@ -239,7 +239,8 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
         }, maxResults);
 
         console.log(`[SCRAPER] Found ${businesses.length} URLs. Starting deep extraction...`);
-
+        // HUGE MEMORY SAVER: Close the massive search page since we already have the URLs!
+        await page.close();
         const data = [];
         const BATCH_SIZE = 1; // ABSOLUTE MINIMUM for memory constraints
         
