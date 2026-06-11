@@ -333,7 +333,7 @@ export default function Dashboard() {
                   <input
                     type="range"
                     min="5"
-                    max="50"
+                    max="20"
                     value={limit}
                     onChange={(e) => setLimit(e.target.value)}
                     className="w-full h-2 bg-[#0B0D14] rounded-full appearance-none cursor-pointer accent-indigo-500"
