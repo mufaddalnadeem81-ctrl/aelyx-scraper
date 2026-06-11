@@ -225,7 +225,7 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
         console.log(`[SCRAPER] Found ${businesses.length} URLs. Starting deep extraction...`);
 
         const data = [];
-        const BATCH_SIZE = 15;
+        const BATCH_SIZE = 2; // Reduced to 2 to run safely under 512MB RAM
         
         for (let i = 0; i < businesses.length; i += BATCH_SIZE) {
             const batch = businesses.slice(i, i + BATCH_SIZE);
