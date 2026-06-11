@@ -10,8 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('./supabase');
-const chromium = process.env.RENDER ? require('@sparticuz/chromium') : null;
-// Database and authentication modules removed
+// The @sparticuz/chromium require was removed. It is too heavy for Render free tier.
 
 puppeteer.use(StealthPlugin());
 
@@ -112,33 +111,24 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
             '--js-flags="--max-old-space-size=256"'
         ];
 
-        if (process.env.RENDER) {
-            launchOptions = {
-                args: [
-                    ...chromium.args, 
-                    ...extremeMemoryArgs
-                ],
-                defaultViewport: chromium.defaultViewport,
-                executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
-            };
-            console.log('[SCRAPER] Launching with optimized @sparticuz/chromium on Render');
-        } else {
-            launchOptions = {
-                headless: 'new',
-                args: extremeMemoryArgs
-            };
+        if (process.env.RENDER && !process.env.BROWSERLESS_API_KEY) {
+            throw new Error("Render free tier cannot run local Chromium. You must set BROWSERLESS_API_KEY in Render environment variables.");
+        }
 
-            const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
-            const localChromePath = findChromeExecutable(cacheDir);
+        launchOptions = {
+            headless: 'new',
+            args: extremeMemoryArgs
+        };
 
-            if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-                launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-                console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
-            } else if (localChromePath) {
-                launchOptions.executablePath = localChromePath;
-                console.log(`[SCRAPER] Found and using local Chrome binary: ${localChromePath}`);
-            }
+        const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
+        const localChromePath = findChromeExecutable(cacheDir);
+
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+            console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+        } else if (localChromePath) {
+            launchOptions.executablePath = localChromePath;
+            console.log(`[SCRAPER] Found and using local Chrome binary: ${localChromePath}`);
         }
 
         if (process.env.BROWSERLESS_API_KEY) {

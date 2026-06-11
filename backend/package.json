@@ -19,6 +19,7 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.1.0",
     "puppeteer": "^24.43.1",
+    "puppeteer-core": "^24.43.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "uuid": "^14.0.0"
