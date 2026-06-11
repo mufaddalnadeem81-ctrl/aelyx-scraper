@@ -10,6 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('./supabase');
+const chromium = process.env.RENDER ? require('@sparticuz/chromium') : null;
 // Database and authentication modules removed
 
 puppeteer.use(StealthPlugin());
@@ -22,14 +23,10 @@ app.set('trust proxy', 1);
 // ============================================================================
 app.use(helmet());
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, '')) 
-    : '*';
-
 app.use(cors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization']
+    origin: '*', // Allows all origins
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -85,25 +82,45 @@ async function scrapeGoogleMaps(searchQuery, maxResults) {
        
         console.log(`[SCRAPER] Starting scrape for "${searchQuery}"`);
 
-        const launchOptions = {
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-blink-features=AutomationControlled'
-            ]
-        };
+        let launchOptions;
 
-        const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
-        const localChromePath = findChromeExecutable(cacheDir);
+        if (process.env.RENDER) {
+            launchOptions = {
+                args: [
+                    ...chromium.args, 
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-zygote',
+                    '--single-process'
+                ],
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+            };
+            console.log('[SCRAPER] Launching with optimized @sparticuz/chromium on Render');
+        } else {
+            launchOptions = {
+                headless: 'new',
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-blink-features=AutomationControlled'
+                ]
+            };
 
-        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-            launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-            console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
-        } else if (localChromePath) {
-            launchOptions.executablePath = localChromePath;
-            console.log(`[SCRAPER] Found and using local Chrome binary: ${localChromePath}`);
+            const cacheDir = path.join(__dirname, '.cache', 'puppeteer');
+            const localChromePath = findChromeExecutable(cacheDir);
+
+            if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+                launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+                console.log(`[SCRAPER] Using env-defined Chrome binary: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+            } else if (localChromePath) {
+                launchOptions.executablePath = localChromePath;
+                console.log(`[SCRAPER] Found and using local Chrome binary: ${localChromePath}`);
+            }
         }
 
         browser = await puppeteer.launch(launchOptions);
