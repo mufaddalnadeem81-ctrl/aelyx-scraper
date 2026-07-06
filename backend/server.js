@@ -10,6 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('./supabase');
+const dbHelper = require('./dbHelper');
 // The @sparticuz/chromium require was removed. It is too heavy for Render free tier.
 
 puppeteer.use(StealthPlugin());
@@ -452,25 +453,23 @@ async function verifyApiKey(req, res, next) {
         });
     }
 
-    const { data, error } = await supabase
-        .from('api_keys')
-        .select('*')
-        .eq('api_key', apiKey)
-        .eq('active', true)
-        .single();
-
-    if (error || !data) {
-        return res.status(401).json({
+    try {
+        const keyRecord = await dbHelper.getApiKey(apiKey);
+        if (!keyRecord) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid API key'
+            });
+        }
+        req.apiKeyRecord = keyRecord;
+        next();
+    } catch (err) {
+        console.error('[AUTH ERROR]', err.message);
+        return res.status(500).json({
             success: false,
-            error: 'Invalid API key'
+            error: 'Internal authorization error'
         });
     }
-
-    // ADD THIS BLOCK HERE
-   
-    req.apiKeyRecord = data;
-
-    next();
 }
 
   
@@ -495,35 +494,20 @@ app.get('/', (req, res) => {
 app.post('/generate-key', async (req, res) => {
 
     try {
-        const apiKey = `sk_live_${uuidv4().replace(/-/g, '')}`;
-
-        const { error } = await supabase
-            .from('api_keys')
-            .insert([
-                {
-                    api_key: apiKey,
-                    owner_name: 'dashboard-user'
-                }
-            ]);
-
-        if (error) {
-            throw error;
-        }
+        const apiKey = `aelyx_live_${uuidv4().replace(/-/g, '')}`;
+        const record = await dbHelper.createApiKey(apiKey, 'dashboard-user');
 
         res.json({
             success: true,
-            apiKey
+            apiKey: record.api_key
         });
 
     } catch (err) {
-
-        console.error(err);
-
+        console.error('[GENERATE KEY ERROR]', err.message);
         res.status(500).json({
             success: false,
             error: err.message
         });
-
     }
 
 });
@@ -596,6 +580,13 @@ app.post('/api/scrape', verifyApiKey, async (req, res) => {
         );
 
         
+
+        // Increment usage count for the verified API key
+        if (req.apiKeyRecord && req.apiKeyRecord.api_key) {
+            await dbHelper.incrementUsage(req.apiKeyRecord.api_key).catch(err => {
+                console.error('[SCRAPE] Error incrementing usage:', err.message);
+            });
+        }
 
         return res.json({
             success: true,
