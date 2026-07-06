@@ -4,18 +4,26 @@ const supabase = require('./supabase');
 
 const KEYS_FILE = path.join(__dirname, 'keys.json');
 
+// Initialize global memory storage for environments with read-only filesystems
+global.localKeys = global.localKeys || {};
+
 function readLocalKeys() {
+    let fileKeys = {};
     try {
         if (fs.existsSync(KEYS_FILE)) {
-            return JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8'));
+            fileKeys = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8'));
         }
     } catch (e) {
         console.error('[DATABASE] Error reading local keys.json:', e.message);
     }
-    return {};
+    // Merge file keys and memory keys, with memory keys taking precedence for updates
+    return { ...fileKeys, ...global.localKeys };
 }
 
 function writeLocalKeys(keys) {
+    // Keep updated in memory
+    global.localKeys = { ...global.localKeys, ...keys };
+    
     try {
         fs.writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2), 'utf8');
     } catch (e) {
