@@ -25,7 +25,16 @@ import {
   Check,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Filter,
+  Phone,
+  Globe,
+  Sliders,
+  Tag,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  X
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -44,7 +53,14 @@ export default function Dashboard() {
   // ===========================================================================
   const [query, setQuery] = useState('');
   const [city, setCity] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
+  const [category, setCategory] = useState('');
+  const [minRating, setMinRating] = useState('');
+  const [minReviews, setMinReviews] = useState('');
+  const [hasPhone, setHasPhone] = useState(false);
+  const [hasWebsite, setHasWebsite] = useState(false);
   const [limit, setLimit] = useState(20);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [usage, setUsage] = useState(0);
   const [requestLimit, setRequestLimit] = useState(1000);
@@ -160,6 +176,63 @@ export default function Dashboard() {
   };
 
   // ===========================================================================
+  // FILTERING LOGIC
+  // ===========================================================================
+  const filteredResults = results.filter(r => {
+    if (category && category.trim()) {
+      const catLower = category.toLowerCase().trim();
+      const matchCat = (r.categoryName && r.categoryName.toLowerCase().includes(catLower)) ||
+                       (r.categories && Array.isArray(r.categories) && r.categories.some(c => String(c).toLowerCase().includes(catLower)));
+      if (!matchCat) return false;
+    }
+    if (minRating) {
+      const numRating = parseFloat(minRating);
+      if (!isNaN(numRating)) {
+        const scoreStr = String(r.totalScore || '').replace('⭐', '').trim();
+        const score = parseFloat(scoreStr);
+        if (isNaN(score) || score < numRating) return false;
+      }
+    }
+    if (minReviews) {
+      const numRev = parseInt(minReviews, 10);
+      if (!isNaN(numRev)) {
+        const revStr = String(r.reviewsCount || '').replace(/[^0-9]/g, '');
+        const revs = parseInt(revStr, 10);
+        if (isNaN(revs) || revs < numRev) return false;
+      }
+    }
+    if (hasPhone) {
+      if (!r.phone || r.phone === 'No Contact') return false;
+    }
+    if (hasWebsite) {
+      if (!r.website || r.website === 'Not Available') return false;
+    }
+    if (stateFilter && stateFilter.trim()) {
+      const stateLower = stateFilter.toLowerCase().trim();
+      const matchState = (r.state && r.state.toLowerCase().includes(stateLower)) ||
+                         (r.street && r.street.toLowerCase().includes(stateLower));
+      if (!matchState) return false;
+    }
+    return true;
+  });
+
+  const activeFilterCount = (category ? 1 : 0) + 
+                            (minRating ? 1 : 0) + 
+                            (minReviews ? 1 : 0) + 
+                            (hasPhone ? 1 : 0) + 
+                            (hasWebsite ? 1 : 0) + 
+                            (stateFilter ? 1 : 0);
+
+  const resetFilters = () => {
+    setStateFilter('');
+    setCategory('');
+    setMinRating('');
+    setMinReviews('');
+    setHasPhone(false);
+    setHasWebsite(false);
+  };
+
+  // ===========================================================================
   // SCRAPER FUNCTION
   // ===========================================================================
   const handleScrape = async () => {
@@ -190,7 +263,13 @@ export default function Dashboard() {
         body: JSON.stringify({
           query,
           city,
-          limit: Number(limit)
+          limit: Number(limit),
+          category,
+          minRating: minRating ? Number(minRating) : undefined,
+          minReviews: minReviews ? Number(minReviews) : undefined,
+          hasPhone,
+          hasWebsite,
+          state: stateFilter
         })
       });
 
@@ -283,17 +362,39 @@ export default function Dashboard() {
 
         {/* DASHBOARD CONTENT */}
         <div className="flex-1 overflow-y-auto p-8 flex flex-col gap-8 custom-scrollbar">
-          {/* SCRAPER CONTROLS (TOP) */}
+          {/* SCRAPER CONTROLS & FILTER SECTION (TOP) */}
           <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 bg-[#1A1D27] p-8 rounded-[2rem] border border-white/5 flex flex-col opacity-0 animate-reveal fill-forwards [animation-delay:100ms] group hover:border-indigo-500/30 transition-all duration-300 hover:scale-[1.005]">
+            <div className="col-span-12 bg-[#1A1D27] p-8 rounded-[2rem] border border-white/5 flex flex-col opacity-0 animate-reveal fill-forwards [animation-delay:100ms] group hover:border-indigo-500/30 transition-all duration-300">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Scraper Controls</h2>
-                  <p className="text-sm text-white/40">Configure extraction parameters</p>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span>Scraper Controls & Input Filters</span>
+                  </h2>
+                  <p className="text-sm text-white/40">Configure search queries and output extraction filters</p>
                 </div>
-                <Zap className="text-indigo-500" size={20} />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      showAdvancedFilters || activeFilterCount > 0
+                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                        : 'bg-white/5 text-white/60 border-white/5 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Sliders size={14} />
+                    <span>Advanced Filters</span>
+                    {activeFilterCount > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                    {showAdvancedFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  <Zap className="text-indigo-500" size={20} />
+                </div>
               </div>
 
+              {/* PRIMARY SEARCH INPUTS */}
               <div className="grid grid-cols-4 gap-6 w-full items-end">
                 {/* Search Query */}
                 <div className="col-span-1 space-y-2">
@@ -345,7 +446,7 @@ export default function Dashboard() {
                   <button
                     onClick={handleScrape}
                     disabled={loading}
-                    className="w-full relative overflow-hidden py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 transition-all duration-300 shadow-[0_10px_30px_rgba(99,102,241,0.3)] disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full relative overflow-hidden py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 transition-all duration-300 shadow-[0_10px_30px_rgba(99,102,241,0.3)] disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
                     <div className="relative flex items-center justify-center gap-3">
                       {loading ? (
@@ -360,12 +461,118 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* EXPANDABLE ADVANCED FILTERS PANEL */}
+              {showAdvancedFilters && (
+                <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-12 gap-6 animate-reveal">
+                  {/* Category Filter */}
+                  <div className="col-span-3 space-y-2">
+                    <label className="text-xs font-bold text-white/60 flex items-center gap-1.5">
+                      <Tag size={14} className="text-indigo-400" />
+                      Category Filter
+                    </label>
+                    <input
+                      type="text"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="e.g. Dentist, Cafe..."
+                      className="w-full bg-[#12141D] border border-white/5 rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+
+                  {/* State / Region */}
+                  <div className="col-span-3 space-y-2">
+                    <label className="text-xs font-bold text-white/60 flex items-center gap-1.5">
+                      <MapPin size={14} className="text-indigo-400" />
+                      State / Region
+                    </label>
+                    <input
+                      type="text"
+                      value={stateFilter}
+                      onChange={(e) => setStateFilter(e.target.value)}
+                      placeholder="e.g. NY, California..."
+                      className="w-full bg-[#12141D] border border-white/5 rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+
+                  {/* Minimum Rating */}
+                  <div className="col-span-3 space-y-2">
+                    <label className="text-xs font-bold text-white/60 flex items-center gap-1.5">
+                      <Star size={14} className="text-amber-400" />
+                      Min Rating
+                    </label>
+                    <select
+                      value={minRating}
+                      onChange={(e) => setMinRating(e.target.value)}
+                      className="w-full bg-[#12141D] border border-white/5 rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                    >
+                      <option value="">Any Rating</option>
+                      <option value="3.0">3.0+ ⭐</option>
+                      <option value="4.0">4.0+ ⭐</option>
+                      <option value="4.5">4.5+ ⭐</option>
+                    </select>
+                  </div>
+
+                  {/* Minimum Reviews */}
+                  <div className="col-span-3 space-y-2">
+                    <label className="text-xs font-bold text-white/60 flex items-center gap-1.5">
+                      <MessageSquare size={14} className="text-purple-400" />
+                      Min Reviews Count
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={minReviews}
+                      onChange={(e) => setMinReviews(e.target.value)}
+                      placeholder="e.g. 10, 50..."
+                      className="w-full bg-[#12141D] border border-white/5 rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                  </div>
+
+                  {/* Toggles Row */}
+                  <div className="col-span-12 flex items-center justify-between pt-2">
+                    <div className="flex gap-6 items-center">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white/70 hover:text-white transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={hasPhone}
+                          onChange={(e) => setHasPhone(e.target.checked)}
+                          className="w-4 h-4 rounded accent-indigo-500 cursor-pointer"
+                        />
+                        <Phone size={14} className="text-indigo-400" />
+                        Has Phone Number Only
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-white/70 hover:text-white transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={hasWebsite}
+                          onChange={(e) => setHasWebsite(e.target.checked)}
+                          className="w-4 h-4 rounded accent-indigo-500 cursor-pointer"
+                        />
+                        <Globe size={14} className="text-indigo-400" />
+                        Has Website Only
+                      </label>
+                    </div>
+
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={resetFilters}
+                        className="flex items-center gap-1.5 text-xs text-pink-400 hover:text-pink-300 transition-colors font-bold cursor-pointer"
+                      >
+                        <RotateCcw size={13} />
+                        Clear All Filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* MAIN CONTENT / RESULTS PREVIEW */}
           <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 bg-[#1A1D27] p-8 rounded-[2rem] border border-white/5 flex flex-col h-[500px] relative opacity-0 animate-reveal fill-forwards [animation-delay:200ms] group hover:border-purple-500/30 transition-all duration-300 hover:scale-[1.005]">
+            <div className="col-span-12 bg-[#1A1D27] p-8 rounded-[2rem] border border-white/5 flex flex-col h-[500px] relative opacity-0 animate-reveal fill-forwards [animation-delay:200ms] group hover:border-purple-500/30 transition-all duration-300">
               {/* Scan Overlay Effect when scraper runs */}
               {loading && (
                 <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2rem] z-20">
@@ -382,14 +589,14 @@ export default function Dashboard() {
                 {results.length > 0 && (
                   <div className="flex gap-3 items-center">
                     <span className="text-xs bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full font-mono font-bold border border-indigo-500/10 animate-pulse-soft">
-                      {results.length} Nodes Found
+                      {filteredResults.length} of {results.length} Nodes Shown
                     </span>
                     <button
                       onClick={() => {
                         const headers = ["Place name", "Total Score", "Reviews Count", "Street", "City", "State", "Country Code", "Website", "Phone", "Categories", "URL", "Category Name"];
                         const csvContent = [
                           headers.join(','),
-                          ...results.map(r => [
+                          ...filteredResults.map(r => [
                             `"${(r.title || '').replace(/"/g, '""')}"`,
                             `"${(r.totalScore || '').replace(/"/g, '""')}"`,
                             `"${(r.reviewsCount || '').replace(/"/g, '""')}"`,
@@ -414,16 +621,16 @@ export default function Dashboard() {
                         link.click();
                         document.body.removeChild(link);
                       }}
-                      className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1 rounded-full font-mono font-bold border border-emerald-500/10 transition-colors"
+                      className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1 rounded-full font-mono font-bold border border-emerald-500/10 transition-colors cursor-pointer"
                     >
-                      Export CSV
+                      Export CSV ({filteredResults.length})
                     </button>
                   </div>
                 )}
               </div>
 
               <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar pr-2 z-10">
-                {results.length === 0 ? (
+                {filteredResults.length === 0 ? (
                   loading ? (
                     <table className="w-full min-w-[1200px] text-left border-collapse">
                       <thead>
@@ -456,7 +663,9 @@ export default function Dashboard() {
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center opacity-30 min-w-full">
                       <Database size={40} className="mb-4 animate-pulse-soft" />
-                      <p className="text-sm font-medium">Awaiting Signal</p>
+                      <p className="text-sm font-medium">
+                        {results.length > 0 ? "No results match active filters" : "Awaiting Signal"}
+                      </p>
                     </div>
                   )
                 ) : (
@@ -477,7 +686,7 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {results.map((res, i) => {
+                      {filteredResults.map((res, i) => {
                         const cleanRating = res.totalScore ? res.totalScore.replace('⭐', '').trim() : 'N/A';
                         return (
                           <tr
@@ -563,9 +772,9 @@ export default function Dashboard() {
               <div className="absolute top-6 right-6 w-10 h-10 bg-indigo-500/20 rounded-full flex items-center justify-center">
                 <Users size={20} className="text-indigo-400" />
               </div>
-              <h3 className="text-3xl font-bold text-white mb-1">{results.length}</h3>
-              <p className="text-sm text-white/50 font-medium">Total Results</p>
-              <p className="text-xs text-indigo-400 mt-2">+0% from last scan</p>
+              <h3 className="text-3xl font-bold text-white mb-1">{filteredResults.length}</h3>
+              <p className="text-sm text-white/50 font-medium">Matching Results</p>
+              <p className="text-xs text-indigo-400 mt-2">{results.length} total harvested</p>
             </div>
 
             <div className="bg-[#1A1D27] p-6 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-purple-500/30 transition-all duration-300 hover:scale-[1.02] opacity-0 animate-reveal fill-forwards [animation-delay:400ms]">

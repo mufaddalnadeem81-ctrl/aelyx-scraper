@@ -551,12 +551,12 @@ app.post('/api/scrape', verifyApiKey, async (req, res) => {
 
     try {
 
-           const { query, city, limit } = req.body;
+        const { query, city, limit, category, minRating, minReviews, hasPhone, hasWebsite, state } = req.body;
 
-       const searchQuery =
-    city?.trim()
-    ? `${query} ${city}`
-    : query;
+        const searchQuery =
+            city?.trim()
+            ? `${query} ${city}`
+            : query;
 
         // =========================================================================
         // VALIDATION
@@ -574,12 +574,59 @@ app.post('/api/scrape', verifyApiKey, async (req, res) => {
             20
         );
 
-        const results = await scrapeGoogleMaps(
+        let results = await scrapeGoogleMaps(
             searchQuery,
             safeLimit
         );
 
-        
+        // =========================================================================
+        // FILTERING LAYER
+        // =========================================================================
+        if (category && typeof category === 'string' && category.trim()) {
+            const catLower = category.toLowerCase().trim();
+            results = results.filter(r => 
+                (r.categoryName && r.categoryName.toLowerCase().includes(catLower)) ||
+                (r.categories && Array.isArray(r.categories) && r.categories.some(c => String(c).toLowerCase().includes(catLower)))
+            );
+        }
+
+        if (minRating) {
+            const numRating = parseFloat(minRating);
+            if (!isNaN(numRating)) {
+                results = results.filter(r => {
+                    const scoreStr = String(r.totalScore || '').replace('⭐', '').trim();
+                    const score = parseFloat(scoreStr);
+                    return !isNaN(score) && score >= numRating;
+                });
+            }
+        }
+
+        if (minReviews) {
+            const numRev = parseInt(minReviews, 10);
+            if (!isNaN(numRev)) {
+                results = results.filter(r => {
+                    const revStr = String(r.reviewsCount || '').replace(/[^0-9]/g, '');
+                    const revs = parseInt(revStr, 10);
+                    return !isNaN(revs) && revs >= numRev;
+                });
+            }
+        }
+
+        if (hasPhone) {
+            results = results.filter(r => r.phone && r.phone !== 'No Contact');
+        }
+
+        if (hasWebsite) {
+            results = results.filter(r => r.website && r.website !== 'Not Available');
+        }
+
+        if (state && typeof state === 'string' && state.trim()) {
+            const stateLower = state.toLowerCase().trim();
+            results = results.filter(r => 
+                (r.state && r.state.toLowerCase().includes(stateLower)) ||
+                (r.street && r.street.toLowerCase().includes(stateLower))
+            );
+        }
 
         // Increment usage count for the verified API key
         if (req.apiKeyRecord && req.apiKeyRecord.api_key) {
